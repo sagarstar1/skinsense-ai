@@ -298,18 +298,20 @@ async function toggleCamera(){if(cameraOn){stopCamera()}else{try{stream=await na
 function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}document.getElementById('video-feed').style.display='none';document.getElementById('cam-btn').textContent='🎥 Start Camera';cameraOn=false;if(!capturedImage){document.getElementById('placeholder').style.display='flex';document.getElementById('face-ring').classList.remove('show');document.getElementById('analyze-btn').disabled=true}}
 function capturePhoto(){const v=document.getElementById('video-feed');if(!cameraOn&&!stream){alert('Please start the camera first.');return}const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;const x=c.getContext('2d');x.translate(c.width,0);x.scale(-1,1);x.drawImage(v,0,0,c.width,c.height);capturedImage=c.toDataURL('image/jpeg',.92);stopCamera();showPreview(capturedImage)}
 
-// Image compressor to reduce timeout risk
+// Aggressive image compressor — keeps image small to avoid timeout
 function compressImage(dataUrl){
   return new Promise((resolve)=>{
     const img=new Image();
     img.onload=()=>{
       const canvas=document.createElement('canvas');
-      const MAX=600;let w=img.width,h=img.height;
-      if(w>MAX){h=Math.round(h*MAX/w);w=MAX}
-      if(h>MAX){w=Math.round(w*MAX/h);h=MAX}
+      // Max 400px — small enough to send fast
+      const MAX=400;let w=img.width,h=img.height;
+      if(w>h){h=Math.round(h*MAX/w);w=MAX}
+      else{w=Math.round(w*MAX/h);h=MAX}
       canvas.width=w;canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(canvas.toDataURL('image/jpeg',.6).split(',')[1]);
+      // Quality 0.5 — still good enough for skin analysis
+      resolve(canvas.toDataURL('image/jpeg',0.5).split(',')[1]);
     };
     img.src=dataUrl;
   });
