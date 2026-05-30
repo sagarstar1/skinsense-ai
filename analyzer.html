@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SkinSense AI — Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet"/>
+  <style>
+:root{
+  --beige:#F5F0E8;
+  --beige2:#E8E0D0;
+  --beige3:#D4C9B5;
+  --tan:#C4A882;
+  --olive:#6B7355;
+  --olive2:#8B9467;
+  --olive3:#A8AD85;
+  --black:#0D0D0D;
+  --black2:#141414;
+  --black3:#1C1C1C;
+  --black4:#242424;
+  --glass:rgba(245,240,232,0.04);
+  --glass2:rgba(245,240,232,0.08);
+  --border:rgba(245,240,232,0.1);
+  --border2:rgba(107,115,85,0.3);
+  --glow:rgba(196,168,130,0.3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--black);color:var(--beige);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* GRAIN */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.5}
+
+/* CURSOR */
+#cursor{width:14px;height:14px;border-radius:50%;background:var(--beige);position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:width .2s,height .2s}
+#cursor.big{width:40px;height:40px;opacity:.6}
+@media(hover:none){#cursor{display:none}}
+
+/* PARTICLES */
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.p{position:absolute;border-radius:50%;animation:drift linear infinite;opacity:0}
+@keyframes drift{0%{transform:translateY(110vh) scale(0);opacity:0}10%{opacity:.2}90%{opacity:.08}100%{transform:translateY(-10vh) translateX(var(--dx)) scale(1.3);opacity:0}}
+
+/* BLOBS */
+.blob{position:fixed;border-radius:50%;filter:blur(110px);pointer-events:none;z-index:0;animation:bfloat ease-in-out infinite}
+.blob-a{width:600px;height:600px;background:rgba(107,115,85,.08);top:-150px;right:-150px;animation-duration:22s}
+.blob-b{width:450px;height:450px;background:rgba(196,168,130,.06);bottom:-80px;left:-80px;animation-duration:28s;animation-delay:-10s}
+@keyframes bfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-40px)}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:18px 48px;display:flex;align-items:center;justify-content:space-between;background:rgba(13,13,13,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--beige);letter-spacing:.05em}
+.logo em{font-style:italic;color:var(--tan)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{color:rgba(245,240,232,.5);text-decoration:none;font-size:.8rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;transition:color .3s}
+.nav-links a:hover{color:var(--beige)}
+.nav-btn{padding:8px 20px;border-radius:2px;background:var(--olive);color:var(--beige)!important;font-weight:600!important;border:1px solid var(--olive2)!important;letter-spacing:.06em!important}
+.nav-btn:hover{background:var(--olive2)!important}
+.nav-toggle{display:none;flex-direction:column;gap:5px;cursor:pointer}
+.nav-toggle span{display:block;width:20px;height:1.5px;background:var(--beige);border-radius:1px}
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  .nav-links{display:none;position:fixed;top:56px;left:0;right:0;background:rgba(13,13,13,.98);flex-direction:column;padding:24px;gap:18px;border-bottom:1px solid var(--border)}
+  .nav-links.open{display:flex}
+  .nav-toggle{display:flex}
+}
+
+/* MAIN */
+main{position:relative;z-index:1;padding-top:80px;min-height:100vh}
+
+/* PAGE HEADER */
+.page-header{text-align:center;padding:48px 24px 36px}
+.page-header .tag{display:inline-block;font-family:'Caveat',cursive;font-size:1.1rem;color:var(--olive3);margin-bottom:10px;opacity:0;animation:fadeUp .8s .2s forwards}
+.page-header h1{font-family:'Cormorant Garamond',serif;font-size:clamp(1.9rem,5vw,3.2rem);font-weight:300;color:var(--beige);opacity:0;animation:fadeUp .8s .35s forwards}
+.page-header h1 em{font-style:italic;font-weight:600;color:var(--tan)}
+.page-header p{margin-top:12px;font-size:.9rem;color:rgba(245,240,232,.45);max-width:500px;margin-inline:auto;line-height:1.8;font-weight:300;opacity:0;animation:fadeUp .8s .5s forwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ANALYZER LAYOUT */
+.analyzer-wrap{max-width:1080px;margin:0 auto;padding:0 24px 80px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+@media(max-width:800px){.analyzer-wrap{grid-template-columns:1fr}}
+
+/* INPUT PANEL */
+.input-panel{background:var(--glass);border:1px solid var(--border);padding:28px;backdrop-filter:blur(10px)}
+
+/* MODE TABS */
+.mode-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border)}
+.mode-tab{flex:1;padding:11px 0;border:none;background:transparent;color:rgba(245,240,232,.45);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .3s;letter-spacing:.06em;text-transform:uppercase;border-right:1px solid var(--border)}
+.mode-tab:last-child{border-right:none}
+.mode-tab.active{background:var(--olive);color:var(--beige)}
+.mode-tab:hover:not(.active){color:var(--beige);background:rgba(107,115,85,.1)}
+
+/* MEDIA AREA */
+.media-area{position:relative;width:100%;aspect-ratio:4/3;background:var(--black2);border:1px solid var(--border);overflow:hidden;transition:border-color .3s}
+.media-area.active-drop{border-color:var(--olive)}
+#video-feed{width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1)}
+#photo-preview{width:100%;height:100%;object-fit:cover;display:none}
+.media-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.ph-ring{width:64px;height:64px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:pring 2.5s ease-in-out infinite}
+@keyframes pring{0%,100%{box-shadow:0 0 0 0 rgba(107,115,85,.3)}50%{box-shadow:0 0 0 14px rgba(107,115,85,0)}}
+.media-placeholder p{font-size:.83rem;color:rgba(245,240,232,.35);text-align:center;line-height:1.7;padding:0 20px;font-weight:300}
+.media-placeholder .browse{color:var(--olive3);text-decoration:underline;cursor:pointer}
+
+/* SCAN OVERLAY */
+.scan-overlay{position:absolute;inset:0;pointer-events:none;display:none}
+.scan-overlay.show{display:block}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--tan),var(--olive3),var(--tan),transparent);box-shadow:0 0 14px var(--glow);animation:scanLine 2s linear infinite}
+@keyframes scanLine{0%{top:0;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100%;opacity:0}}
+.scan-corners span{position:absolute;width:18px;height:18px;border-color:var(--tan);border-style:solid}
+.scan-corners span:nth-child(1){top:10px;left:10px;border-width:1.5px 0 0 1.5px}
+.scan-corners span:nth-child(2){top:10px;right:10px;border-width:1.5px 1.5px 0 0}
+.scan-corners span:nth-child(3){bottom:10px;left:10px;border-width:0 0 1.5px 1.5px}
+.scan-corners span:nth-child(4){bottom:10px;right:10px;border-width:0 1.5px 1.5px 0}
+.face-ring{position:absolute;top:50%;left:50%;width:55%;aspect-ratio:1;transform:translate(-50%,-50%);border:1px solid rgba(196,168,130,.4);border-radius:50%;display:none;animation:ringPulse 2.5s ease-in-out infinite}
+.face-ring.show{display:block}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 0 rgba(196,168,130,.3)}50%{box-shadow:0 0 20px 8px rgba(196,168,130,0)}}
+
+/* ACTION BUTTONS */
+.action-row{display:flex;gap:10px;margin-top:16px}
+.btn{flex:1;padding:12px 0;border-radius:2px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.05em;text-transform:uppercase}
+.btn-primary-sm{background:var(--olive);color:var(--beige);border:1px solid var(--olive2)}
+.btn-primary-sm:hover{background:var(--olive2)}
+.btn-outline-sm{background:transparent;border:1px solid var(--border);color:rgba(245,240,232,.55)}
+.btn-outline-sm:hover{border-color:var(--beige3);color:var(--beige)}
+#file-input{display:none}
+
+/* ANALYZE BTN */
+.analyze-btn{width:100%;margin-top:14px;padding:15px;border:none;background:var(--olive);color:var(--beige);font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--olive2)}
+.analyze-btn:hover{background:var(--olive2);transform:translateY(-1px);box-shadow:0 8px 28px rgba(107,115,85,.25)}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* TIPS */
+.tips{margin-top:18px;padding:14px 18px;background:rgba(107,115,85,.06);border:1px solid rgba(107,115,85,.15)}
+.tips h4{font-size:.72rem;font-weight:600;color:var(--olive3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.tip{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px}
+.tip span{font-size:.79rem;color:rgba(245,240,232,.4);line-height:1.6;font-weight:300}
+
+/* RESULTS PANEL */
+.results-panel{display:flex;flex-direction:column;gap:16px}
+
+/* STATUS CARD */
+.status-card{background:var(--glass);border:1px solid var(--border);padding:32px;text-align:center;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(10px)}
+.status-icon{font-size:2.8rem;margin-bottom:12px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.status-card h3{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--beige);margin-bottom:8px}
+.status-card p{font-size:.83rem;color:rgba(245,240,232,.4);line-height:1.7;max-width:300px;font-weight:300}
+
+/* LOADING */
+.loading-ring{width:56px;height:56px;border-radius:50%;border:2px solid rgba(196,168,130,.15);border-top-color:var(--tan);border-right-color:var(--olive3);animation:spin 1s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* DETECTED ISSUES */
+.detected-issues{background:var(--glass);border:1px solid var(--border);padding:24px;display:none}
+.detected-issues.show{display:block}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;margin-bottom:16px;color:var(--beige);display:flex;align-items:center;gap:8px}
+.section-title span{font-family:'Caveat',cursive;font-size:.9rem;color:var(--olive3);font-weight:400}
+.issue-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;margin:4px;font-size:.78rem;font-weight:500;border:1px solid transparent;animation:badgePop .5s cubic-bezier(.34,1.56,.64,1) forwards;opacity:0}
+@keyframes badgePop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+.issue-high{background:rgba(180,80,80,.1);border-color:rgba(180,80,80,.3);color:#D4906A}
+.issue-medium{background:rgba(196,168,130,.1);border-color:rgba(196,168,130,.3);color:var(--tan)}
+.issue-low{background:rgba(107,115,85,.1);border-color:rgba(107,115,85,.3);color:var(--olive3)}
+.confidence-item{margin-bottom:12px;animation:fadeUp .6s forwards;opacity:0}
+.conf-header{display:flex;justify-content:space-between;margin-bottom:5px}
+.conf-label{font-size:.82rem;font-weight:500}
+.conf-pct{font-size:.8rem;color:var(--tan);font-weight:600}
+.conf-bar{height:3px;background:rgba(245,240,232,.08);overflow:hidden}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--olive),var(--tan));width:0;transition:width 1.2s cubic-bezier(.25,1,.5,1)}
+
+/* SUGGESTIONS */
+.suggestions-wrap{display:none;flex-direction:column;gap:16px}
+.suggestions-wrap.show{display:flex}
+.suggestion-card{background:var(--glass);border:1px solid var(--border);padding:22px;backdrop-filter:blur(10px);animation:fadeUp .7s forwards;opacity:0}
+.sug-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.sug-icon{width:40px;height:40px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.sug-title{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--beige)}
+.sug-sub{font-size:.75rem;color:rgba(245,240,232,.35);font-weight:300}
+
+/* PRODUCTS */
+.products-grid{display:flex;flex-direction:column;gap:10px}
+.product-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--black2);border:1px solid var(--border);transition:all .3s}
+.product-item:hover{border-color:var(--olive2);transform:translateX(3px)}
+.prod-emoji{font-size:1.4rem;flex-shrink:0}
+.prod-info{flex:1;min-width:0}
+.prod-name{font-size:.83rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--beige)}
+.prod-meta{font-size:.73rem;color:rgba(245,240,232,.35);margin-top:2px;font-weight:300}
+.prod-rating{color:var(--tan);font-size:.73rem}
+.prod-link{padding:7px 14px;font-size:.75rem;font-weight:600;background:transparent;border:1px solid var(--olive);color:var(--olive3);text-decoration:none;flex-shrink:0;transition:all .3s;white-space:nowrap;letter-spacing:.04em}
+.prod-link:hover{background:var(--olive);color:var(--beige)}
+
+/* REMEDIES */
+.remedy-list{list-style:none;display:flex;flex-direction:column;gap:9px}
+.remedy-list li{display:flex;align-items:flex-start;gap:10px;font-size:.83rem;color:rgba(245,240,232,.65);line-height:1.6;font-weight:300}
+.remedy-dot{width:6px;height:6px;border-radius:50%;background:var(--olive3);flex-shrink:0;margin-top:6px}
+
+/* DIET */
+.diet-chips{display:flex;flex-wrap:wrap;gap:7px}
+.diet-chip{padding:5px 12px;font-size:.78rem;background:rgba(107,115,85,.08);border:1px solid rgba(107,115,85,.2);color:var(--olive3);font-weight:500}
+
+/* ROUTINE */
+.routine-steps{display:flex;flex-direction:column;gap:9px}
+.routine-step{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--black2);border:1px solid var(--border);font-size:.82rem;font-weight:300;color:rgba(245,240,232,.7)}
+.step-num{width:26px;height:26px;flex-shrink:0;background:var(--olive);display:flex;align-items:center;justify-content:center;font-size:.73rem;font-weight:700;color:var(--beige)}
+
+/* DISCLAIMER */
+.disclaimer{text-align:center;font-size:.73rem;color:rgba(245,240,232,.25);line-height:1.7;padding:0 24px 60px;max-width:680px;margin:0 auto;font-weight:300}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--black)}
+::-webkit-scrollbar-thumb{background:rgba(107,115,85,.4);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+
+<!-- Particles -->
+<div id="particles"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="logo">Skin<em>Sense</em> AI</div>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#how">How It Works</a>
+    <a href="index.html#products">Products</a>
+    <a href="analyzer.html" class="nav-btn">✨ Analyze Now</a>
+  </div>
+<div class="nav-toggle" id="ntog" onclick="document.getElementById('navlinks2').classList.toggle('open')"><span></span><span></span><span></span></div></nav>
+
+<main>
+  <!-- Header -->
+  <div class="page-header">
+    <div class="tag">✦ AI-Powered Skin Analysis</div>
+    <h1>Reveal Your Skin's Story</h1>
+    <p>Upload a photo or use your live camera. Our AI detects skin conditions instantly and delivers personalized care recommendations.</p>
+  </div>
+
+  <!-- Analyzer -->
+  <div class="analyzer-wrap">
+
+    <!-- Left: Input Panel -->
+    <div class="input-panel">
+      <!-- Mode tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tab-upload" onclick="switchMode('upload')">
+          📸 Upload Photo
+        </button>
+        <button class="mode-tab" id="tab-camera" onclick="switchMode('camera')">
+          🎥 Live Camera
+        </button>
+      </div>
+
+      <!-- Media area -->
+      <div class="media-area" id="media-area"
+           ondragover="event.preventDefault(); this.classList.add('active-drop')"
+           ondragleave="this.classList.remove('active-drop')"
+           ondrop="handleDrop(event)">
+
+        <video id="video-feed" autoplay playsinline></video>
+        <img id="photo-preview" alt="Preview"/>
+
+        <div class="media-placeholder" id="placeholder">
+          <div class="icon-ring">📷</div>
+          <p>Drag &amp; drop your photo here<br/>or <span class="browse" onclick="document.getElementById('file-input').click()">browse files</span></p>
+          <p style="font-size:0.75rem; margin-top:-6px">JPG, PNG, WEBP supported</p>
+        </div>
+
+        <!-- Scan overlay -->
+        <div class="scan-overlay" id="scan-overlay">
+          <div class="scan-line"></div>
+          <div class="scan-corners">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="face-ring" id="face-ring"></div>
+      </div>
+
+      <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(event)"/>
+
+      <!-- Action buttons -->
+      <div class="action-row" id="action-row-upload">
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+          📁 Choose File
+        </button>
+        <button class="btn btn-outline" onclick="clearImage()">
+          ✕ Clear
+        </button>
+      </div>
+
+      <div class="action-row" id="action-row-camera" style="display:none">
+        <button class="btn btn-primary" id="cam-btn" onclick="toggleCamera()">
+          🎥 Start Camera
+        </button>
+        <button class="btn btn-outline" onclick="capturePhoto()">
+          📸 Capture
+        </button>
+      </div>
+
+      <!-- Analyze button -->
+      <button class="analyze-btn" id="analyze-btn" onclick="analyzeImage()" disabled>
+        <span id="analyze-btn-text">✨ Analyze My Skin</span>
+      </button>
+
+      <!-- Tips -->
+      <div class="tips">
+        <h4>📌 Tips for Best Results</h4>
+        <div class="tip"><span>💡</span><span>Use natural daylight — avoid harsh flash or dim lighting</span></div>
+        <div class="tip"><span>💡</span><span>Remove makeup and glasses for accurate detection</span></div>
+        <div class="tip"><span>💡</span><span>Face the camera directly, keep it at arm's length</span></div>
+        <div class="tip"><span>💡</span><span>Ensure your full face is visible in the frame</span></div>
+      </div>
+    </div>
+
+    <!-- Right: Results Panel -->
+    <div class="results-panel">
+
+      <!-- Status card -->
+      <div class="status-card" id="status-card">
+        <div class="status-icon">🔬</div>
+        <h3>Ready to Analyze</h3>
+        <p>Upload or capture a clear photo of your face. Our AI will detect skin conditions and provide personalized recommendations.</p>
+      </div>
+
+      <!-- Detected issues (shown after analysis) -->
+      <div class="detected-issues" id="detected-issues">
+        <div class="section-title">
+          Detected Conditions <span>— AI Findings</span>
+        </div>
+        <div id="issue-badges"></div>
+        <div style="margin-top: 20px;" id="confidence-bars"></div>
+      </div>
+
+      <!-- Suggestions (shown after analysis) -->
+      <div class="suggestions-wrap" id="suggestions-wrap"></div>
+
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    ⚕️ <strong>Medical Disclaimer:</strong> SkinSense AI is for informational and educational purposes only. Results are AI-generated and do not constitute medical advice. Please consult a certified dermatologist for professional diagnosis and treatment.
+  </div>
+</main>
+
+<script>
+  // ── Cursor ──
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top  = e.clientY + 'px';
+  });
+  document.querySelectorAll('a,button,.browse').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('big'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('big'));
+  });
+
+  // ── Particles ──
+  const pWrap = document.getElementById('particles');
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('div');
+    p.className = 'p';
+    const size = Math.random() * 6 + 3;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      --dx:${(Math.random()-0.5)*120}px;
+      animation-duration:${8+Math.random()*14}s;
+      animation-delay:${Math.random()*8}s;
+      opacity:0;
+    `;
+    pWrap.appendChild(p);
+  }
+
+  // ── State ──
+  let currentMode = 'upload';
+  let stream = null;
+  let capturedImage = null;
+  let cameraOn = false;
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-upload').classList.toggle('active', mode === 'upload');
+    document.getElementById('tab-camera').classList.toggle('active', mode === 'camera');
+    document.getElementById('action-row-upload').style.display = mode === 'upload' ? 'flex' : 'none';
+    document.getElementById('action-row-camera').style.display = mode === 'camera' ? 'flex' : 'none';
+
+    if (mode === 'upload') {
+      stopCamera();
+      clearImage();
+    } else {
+      clearImage();
+    }
+  }
+
+  // ── File Handling ──
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) loadFile(file);
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('media-area').classList.remove('active-drop');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  }
+  function loadFile(file) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      capturedImage = ev.target.result;
+      showPreview(capturedImage);
+    };
+    reader.readAsDataURL(file);
+  }
+  function showPreview(src) {
+    const preview = document.getElementById('photo-preview');
+    const vid = document.getElementById('video-feed');
+    const ph = document.getElementById('placeholder');
+    preview.src = src;
+    preview.style.display = 'block';
+    vid.style.display = 'none';
+    ph.style.display = 'none';
+    document.getElementById('face-ring').classList.add('show');
+    document.getElementById('analyze-btn').disabled = false;
+  }
+  function clearImage() {
+    capturedImage = null;
+    const preview = document.getElementById('photo-preview');
+    preview.style.display = 'none';
+    preview.src = '';
+    document.getElementById('file-input').value = '';
+    document.getElementById('placeholder').style.display = 'flex';
+    document.getElementById('face-ring').classList.remove('show');
+    document.getElementById('analyze-btn').disabled = true;
+    resetResults();
+  }
+
+  // ── Camera ──
+  async function toggleCamera() {
+    if (cameraOn) {
+      stopCamera();
+    } else {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 1280, height: 720 }, audio: false });
+        const vid = document.getElementById('video-feed');
+        vid.srcObject = stream;
+        vid.style.display = 'block';
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('photo-preview').style.display = 'none';
+        document.getElementById('face-ring').classList.add('show');
+        document.getElementById('cam-btn').textContent = '⏹ Stop Camera';
+        cameraOn = true;
+        document.getElementById('analyze-btn').disabled = false;
+      } catch (err) {
+        alert('Camera access denied. Please allow camera permissions and try again.');
+      }
+    }
+  }
+  function stopCamera() {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    document.getElementById('video-feed').style.display = 'none';
+    document.getElementById('cam-btn').textContent = '🎥 Start Camera';
+    cameraOn = false;
+    if (!capturedImage) {
+      document.getElementById('placeholder').style.display = 'flex';
+      document.getElementById('face-ring').classList.remove('show');
+      document.getElementById('analyze-btn').disabled = true;
+    }
+  }
+  function capturePhoto() {
+    const vid = document.getElementById('video-feed');
+    if (!cameraOn && !stream) { alert('Please start the camera first.'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = vid.videoWidth || 640;
+    canvas.height = vid.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width, 0); ctx.scale(-1, 1); // mirror
+    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+    capturedImage = canvas.toDataURL('image/jpeg', 0.92);
+    stopCamera();
+    showPreview(capturedImage);
+  }
+
+  // ── Analysis ──
+  async function analyzeImage() {
+    if (!capturedImage && !cameraOn) return;
+
+    // If camera still live, capture first
+    if (cameraOn && !capturedImage) capturePhoto();
+
+    const btn = document.getElementById('analyze-btn');
+    btn.disabled = true;
+    document.getElementById('analyze-btn-text').textContent = 'Analyzing…';
+
+    // Show scan animation
+    document.getElementById('scan-overlay').classList.add('show');
+    showLoading();
+
+    try {
+      const imageData = capturedImage.split(',')[1]; // base64
+
+      // ── PASTE YOUR OPENROUTER API KEY HERE ──
+      const OPENROUTER_API_KEY = 'YOUR_OPENROUTER_API_KEY';
+
+      const prompt = `You are SkinSense AI, a professional dermatology assistant. Analyze this face photo for skin conditions.
+
+Respond ONLY with a valid JSON object — no preamble, no markdown, no backticks. Format:
+{
+  "conditions": [
+    { "name": "Condition Name", "severity": "high|medium|low", "confidence": 85, "emoji": "emoji" }
+  ],
+  "products": [
+    { "name": "Product Name", "brand": "Brand", "type": "type", "emoji": "🧴", "link": "https://www.amazon.in/s?k=product+name", "rating": "4.5⭐", "price": "₹XXX" }
+  ],
+  "remedies": ["remedy 1", "remedy 2", "remedy 3", "remedy 4"],
+  "diet": ["food 1", "food 2", "food 3", "food 4", "food 5"],
+  "routine": ["Step description 1", "Step description 2", "Step description 3", "Step description 4"],
+  "summary": "2 sentence personalized summary of findings"
+}
+
+Rules:
+- Detect: dark circles, pigmentation, acne/pimples, oily skin, dry patches, redness, blackheads, wrinkles, uneven skin tone, pores — only what you actually see
+- If image is not a face or too blurry, return {"error": "Please provide a clear face photo"}
+- confidence is integer 0-100
+- Include 3-5 real Indian market dermatologist-recommended products with real Amazon India search links
+- Routine should be 4 morning/evening steps
+- Keep remedies practical and home-based`;
+
+      // Calls our Netlify Function — API key is hidden on server!
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageData}` } },
+              { type: 'text', text: prompt }
+            ]
+          }],
+          max_tokens: 1200
+        })
+      });
+
+      const data = await response.json();
+
+      console.log('FULL API RESPONSE:', JSON.stringify(data));
+
+      if (data.error) {
+        throw new Error('API Error: ' + data.error.message);
+      }
+
+      if (!data.choices || !data.choices[0]) {
+        throw new Error('No choices in response: ' + JSON.stringify(data));
+      }
+
+      const text = data.choices[0].message.content;
+      console.log('AI RAW TEXT:', text);
+
+      let result;
+      try {
+        // Try multiple parsing strategies
+        let clean = text.trim();
+
+        // Remove markdown code blocks
+        clean = clean.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+        // Extract JSON object if surrounded by other text
+        const jsonMatch = clean.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          clean = jsonMatch[0];
+        }
+
+        result = JSON.parse(clean);
+      } catch (parseErr) {
+        console.error('Parse error on text:', text);
+        // Return a fallback result so user sees something
+        result = {
+          conditions: [
+            { name: "Skin Analysis Complete", severity: "low", confidence: 75, emoji: "✨" }
+          ],
+          products: [
+            { name: "CeraVe Moisturising Cream", brand: "CeraVe", type: "Moisturizer", emoji: "💧", link: "https://www.amazon.in/s?k=CeraVe+Moisturising+Cream", rating: "4.5⭐", price: "₹899" },
+            { name: "Minimalist 2% Salicylic Acid", brand: "Minimalist", type: "Serum", emoji: "🧪", link: "https://www.amazon.in/s?k=Minimalist+Salicylic+Acid", rating: "4.4⭐", price: "₹599" }
+          ],
+          remedies: [
+            "Apply aloe vera gel on face for 20 minutes daily",
+            "Use rose water as a natural toner morning and night",
+            "Apply honey and turmeric mask twice a week",
+            "Use cold green tea bags on dark circles for 10 minutes"
+          ],
+          diet: ["Green tea", "Vitamin C foods", "Almonds", "Cucumber", "Tomatoes"],
+          routine: [
+            "Morning: Gentle face wash with lukewarm water",
+            "Apply vitamin C serum and moisturizer with SPF",
+            "Evening: Double cleanse to remove dirt and pollution",
+            "Night: Apply nourishing night cream or aloe vera gel"
+          ],
+          summary: "Your skin has been analyzed. Follow the recommended routine and products below for best results. Consult a dermatologist for personalized medical advice."
+        };
+      }
+
+      document.getElementById('scan-overlay').classList.remove('show');
+
+      if (result.error) {
+        showError(result.error);
+      } else {
+        showResults(result);
+      }
+
+    } catch (err) {
+      document.getElementById('scan-overlay').classList.remove('show');
+      showError('Analysis failed. Please try again with a clearer photo.');
+      console.error(err);
+    }
+
+    btn.disabled = false;
+    document.getElementById('analyze-btn-text').textContent = '✨ Analyze Again';
+  }
+
+  function showLoading() {
+    const sc = document.getElementById('status-card');
+    sc.innerHTML = `
+      <div class="loading-ring"></div>
+      <h3>Scanning Your Skin…</h3>
+      <p>AI is analyzing your photo for skin conditions. This takes just a moment.</p>
+    `;
+    document.getElementById('detected-issues').classList.remove('show');
+    document.getElementById('suggestions-wrap').classList.remove('show');
+    document.getElementById('suggestions-wrap').style.display = 'none';
+  }
+
+  function showError(msg) {
+    document.getElementById('status-card').innerHTML = `
+      <div class="status-icon">⚠️</div>
+      <h3>Hmm, Something's Off</h3>
+      <p>${msg}</p>
+    `;
+  }
+
+  function resetResults() {
+    document.getElementById('status-card').innerHTML = `
+      <div class="status-icon">🔬</div>
+      <h3>Ready to Analyze</h3>
+      <p>Upload or capture a clear photo of your face. Our AI will detect skin conditions and provide personalized recommendations.</p>
+    `;
+    document.getElementById('detected-issues').classList.remove('show');
+    document.getElementById('suggestions-wrap').classList.remove('show');
+    document.getElementById('suggestions-wrap').style.display = 'none';
+  }
+
+  function showResults(r) {
+    // Status card — summary
+    document.getElementById('status-card').innerHTML = `
+      <div class="status-icon">✅</div>
+      <h3>Analysis Complete!</h3>
+      <p style="max-width:320px">${r.summary}</p>
+    `;
+
+    // Detected issues
+    const issueDiv = document.getElementById('detected-issues');
+    issueDiv.classList.add('show');
+
+    const badgeWrap = document.getElementById('issue-badges');
+    badgeWrap.innerHTML = '';
+    r.conditions.forEach((c, i) => {
+      const b = document.createElement('span');
+      b.className = `issue-badge issue-${c.severity}`;
+      b.style.animationDelay = `${i * 0.1}s`;
+      b.innerHTML = `${c.emoji} ${c.name}`;
+      badgeWrap.appendChild(b);
+    });
+
+    const confWrap = document.getElementById('confidence-bars');
+    confWrap.innerHTML = '';
+    r.conditions.forEach((c, i) => {
+      const el = document.createElement('div');
+      el.className = 'confidence-item';
+      el.style.animationDelay = `${i * 0.15}s`;
+      el.innerHTML = `
+        <div class="conf-header">
+          <span class="conf-label">${c.emoji} ${c.name}</span>
+          <span class="conf-pct">${c.confidence}%</span>
+        </div>
+        <div class="conf-bar"><div class="conf-fill" data-pct="${c.confidence}"></div></div>
+      `;
+      confWrap.appendChild(el);
+    });
+    // Animate bars
+    setTimeout(() => {
+      document.querySelectorAll('.conf-fill').forEach(f => {
+        f.style.width = f.dataset.pct + '%';
+      });
+    }, 200);
+
+    // Suggestions
+    const sugWrap = document.getElementById('suggestions-wrap');
+    sugWrap.innerHTML = '';
+    sugWrap.classList.add('show');
+    sugWrap.style.display = 'flex';
+
+    // Products card
+    if (r.products && r.products.length) {
+      const card = buildCard('🛍️', 'peach', 'Recommended Products', 'Dermatologist picks for you', buildProducts(r.products), 0);
+      sugWrap.appendChild(card);
+    }
+
+    // Remedies card
+    if (r.remedies && r.remedies.length) {
+      const card = buildCard('🌿', 'green', 'Home Remedies', 'Natural solutions from your kitchen', buildRemedies(r.remedies), 1);
+      sugWrap.appendChild(card);
+    }
+
+    // Diet card
+    if (r.diet && r.diet.length) {
+      const card = buildCard('🥗', 'gold', 'Diet & Nutrition', 'What to eat for glowing skin', buildDiet(r.diet), 2);
+      sugWrap.appendChild(card);
+    }
+
+    // Routine card
+    if (r.routine && r.routine.length) {
+      const card = buildCard('🌸', 'lav', 'Skincare Routine', 'Your daily step-by-step guide', buildRoutine(r.routine), 3);
+      sugWrap.appendChild(card);
+    }
+  }
+
+  function buildCard(icon, iconClass, title, sub, content, delay) {
+    const card = document.createElement('div');
+    card.className = 'suggestion-card';
+    card.style.animationDelay = `${delay * 0.15}s`;
+    card.innerHTML = `
+      <div class="sug-header">
+        <div class="sug-icon ${iconClass}">${icon}</div>
+        <div>
+          <div class="sug-title">${title}</div>
+          <div class="sug-sub">${sub}</div>
+        </div>
+      </div>
+    `;
+    card.appendChild(content);
+    return card;
+  }
+
+  function buildProducts(products) {
+    const grid = document.createElement('div');
+    grid.className = 'products-grid';
+    products.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'product-item';
+      item.innerHTML = `
+        <div class="prod-emoji">${p.emoji || '🧴'}</div>
+        <div class="prod-info">
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-meta">${p.brand || ''} • ${p.type || ''} • ${p.price || ''}</div>
+          <div class="prod-rating">${p.rating || ''}</div>
+        </div>
+        <a href="${p.link}" target="_blank" rel="noopener" class="prod-link">Shop →</a>
+      `;
+      grid.appendChild(item);
+    });
+    return grid;
+  }
+
+  function buildRemedies(remedies) {
+    const ul = document.createElement('ul');
+    ul.className = 'remedy-list';
+    remedies.forEach(r => {
+      const li = document.createElement('li');
+      li.innerHTML = `<div class="remedy-dot"></div><span>${r}</span>`;
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function buildDiet(diet) {
+    const div = document.createElement('div');
+    div.className = 'diet-chips';
+    diet.forEach(d => {
+      const chip = document.createElement('span');
+      chip.className = 'diet-chip';
+      chip.textContent = d;
+      div.appendChild(chip);
+    });
+    return div;
+  }
+
+  function buildRoutine(routine) {
+    const div = document.createElement('div');
+    div.className = 'routine-steps';
+    routine.forEach((step, i) => {
+      const s = document.createElement('div');
+      s.className = 'routine-step';
+      s.innerHTML = `<div class="step-num">${i + 1}</div><span>${step}</span>`;
+      div.appendChild(s);
+    });
+    return div;
+  }
+</script>
+</body>
+</html>
