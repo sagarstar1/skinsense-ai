@@ -328,23 +328,46 @@ async function analyzeImage(){
     const imageData=await compressImage(capturedImage);
     const prompt=`You are SkinSense AI, a professional dermatology assistant. Analyze this face photo for skin conditions.\n\nRespond ONLY with a valid JSON object — no preamble, no markdown, no backticks. Format:\n{\n  "conditions": [{ "name": "Condition Name", "severity": "high|medium|low", "confidence": 85, "emoji": "emoji" }],\n  "products": [{ "name": "Product Name", "brand": "Brand", "type": "type", "emoji": "🧴", "link": "https://www.amazon.in/s?k=product+name", "rating": "4.5⭐", "price": "₹XXX" }],\n  "remedies": ["remedy 1", "remedy 2", "remedy 3", "remedy 4"],\n  "diet": ["food 1", "food 2", "food 3", "food 4", "food 5"],\n  "routine": ["Step 1", "Step 2", "Step 3", "Step 4"],\n  "summary": "2 sentence personalized summary"\n}\nRules: Detect dark circles, pigmentation, acne, oily skin, dry patches, redness, blackheads, wrinkles, uneven tone, pores. If not a face return {"error":"Please provide a clear face photo"}. Include 3-5 real Indian market products with Amazon India links.`;
 
-    // Calls Netlify Function — API key hidden on server!
-    const response=await fetch('/api/analyze',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'nvidia/nemotron-nano-12b-v2-vl:free',
-        messages:[{role:'user',content:[
-          {type:'image_url',image_url:{url:`data:image/jpeg;base64,${imageData}`}},
-          {type:'text',text:prompt}
-        ]}],
-        max_tokens:1200
-      })
+    // Calls Netlify Function with auto-retry on timeout
+    const payload = JSON.stringify({
+      model:'nvidia/nemotron-nano-12b-v2-vl:free',
+      messages:[{role:'user',content:[
+        {type:'image_url',image_url:{url:`data:image/jpeg;base64,${imageData}`}},
+        {type:'text',text:prompt}
+      ]}],
+      max_tokens:1200
     });
 
-    const data=await response.json();
-    if(data.error)throw new Error('API Error: '+data.error.message);
-    if(!data.choices||!data.choices[0])throw new Error('No response from AI.');
+    let data = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while(attempts < maxAttempts) {
+      attempts++;
+      try {
+        if(attempts > 1) {
+          document.getElementById('status-card').innerHTML=`<div class="loading-ring"></div><h3>Retrying... (${attempts}/${maxAttempts})</h3><p>Almost there, please wait a moment.</p>`;
+        }
+        const response = await fetch('/api/analyze', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: payload
+        });
+        if(!response.ok) {
+          if(attempts < maxAttempts) continue;
+          throw new Error('Server error: ' + response.status);
+        }
+        data = await response.json();
+        if(data && (data.choices || data.error)) break;
+      } catch(fetchErr) {
+        if(attempts >= maxAttempts) throw fetchErr;
+        await new Promise(r => setTimeout(r, 2000)); // wait 2s before retry
+      }
+    }
+
+    if(!data) throw new Error('No response after retries.');
+    if(data.error) throw new Error('API Error: ' + data.error.message);
+    if(!data.choices||!data.choices[0]) throw new Error('No response from AI.');
     const text=data.choices[0].message.content;
     let result;
     try{
